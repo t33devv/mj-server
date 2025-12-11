@@ -147,35 +147,39 @@ router.get('/votes/current', authenticate, async (req, res) => {
 
 router.post('/votes', authenticate, async (req, res) => {
     try {
-        const { jamId, voteData } = req.body;
+        const { theme } = req.body;
+        const CURRENT_VOTING_PERIOD = 1;
         
         // Check if already voted
         const existingVote = await db('votes')
             .where({
                 user_id: req.user.id,
-                jam_id: jamId
+                voting_period_id: CURRENT_VOTING_PERIOD
             })
             .first();
         
         if (existingVote) {
-            return res.status(400).json({ error: 'You have already voted for this jam' });
+            // Update existing vote (allow changing vote)
+            await db('votes')
+                .where({ id: existingVote.id })
+                .update({
+                    theme: theme,
+                    updated_at: new Date()
+                });
+            
+            return res.json({ success: true, theme });
         }
         
-        // Insert vote
-        const [vote] = await db('votes')
-            .insert({
-                user_id: req.user.id,
-                jam_id: jamId,
-                vote_data: JSON.stringify(voteData)
-            })
-            .returning('*');
-        
-        res.json({
-            success: true,
-            message: 'Vote submitted successfully',
-            vote
+        // Insert new vote
+        await db('votes').insert({
+            user_id: req.user.id,
+            voting_period_id: CURRENT_VOTING_PERIOD,
+            theme: theme
         });
+        
+        res.json({ success: true, theme });
     } catch (error) {
+        console.error('Vote error:', error);
         res.status(500).json({ error: error.message });
     }
 });
