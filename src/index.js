@@ -20,7 +20,7 @@ const cookieParser = require('cookie-parser');
 
 
 app.use(cors({
-    origin: process.env.FRONTEND_URL,
+    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
     credentials: true,
 }));
 app.use(express.json());
@@ -32,7 +32,8 @@ router.get('/user/me', authenticate, async (req, res) => {
 });
 
 router.get('/auth/discord/login', async (req, res) => {
-    const url = `${process.env.DISCORD_REDIRECT_URL}`;
+    const redirectUri = encodeURIComponent(process.env.DISCORD_REDIRECT_URI);
+    const url = `https://discord.com/oauth2/authorize?client_id=${process.env.DISCORD_CLIENT_ID}&response_type=code&redirect_uri=${redirectUri}&scope=identify`;
     
     res.redirect(url);
 })
@@ -101,9 +102,8 @@ router.get('/auth/discord/callback', async (req, res) => {
 
     res.cookie('token', token, {
         httpOnly: true,
-        secure: false,
-        sameSite: 'lax',
-        domain: 'localhost',
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
         path: '/'
     });
 
@@ -113,9 +113,8 @@ router.get('/auth/discord/callback', async (req, res) => {
 router.post('/auth/logout', (req, res) => {
     res.clearCookie('token', {
         httpOnly: true,
-        secure: false,
-        sameSite: 'lax',
-        domain: 'localhost',
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
         path: '/'
     });
     res.json({ success: true, message: 'Logged out' });
