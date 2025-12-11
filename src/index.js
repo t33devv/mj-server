@@ -27,6 +27,36 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(router);
 
+router.get('/getVotes', async (req, res) => {
+    try {
+        const CURRENT_VOTING_PERIOD = 1;
+        
+        const voteCounts = await db('votes')
+            .where({ voting_period_id: CURRENT_VOTING_PERIOD })
+            .select('theme')
+            .count('* as count')
+            .groupBy('theme')
+            .orderBy('count', 'desc');
+        
+        const totalVotes = await db('votes')
+            .where({ voting_period_id: CURRENT_VOTING_PERIOD })
+            .count('* as total')
+            .first();
+        
+        res.json({
+            success: true,
+            voteCounts: voteCounts.map(v => ({
+                theme: v.theme,
+                count: parseInt(v.count)
+            })),
+            totalVotes: parseInt(totalVotes.total)
+        });
+    } catch (error) {
+        console.error('Get votes error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 router.get('/user/me', authenticate, async (req, res) => {
     res.send(req.user);
 });
