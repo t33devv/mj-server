@@ -124,4 +124,81 @@ router.post('/auth/logout', (req, res) => {
     res.json({ success: true, message: 'Logged out' });
 });
 
+router.get('/votes/current', authenticate, async (req, res) => {
+    try {
+        // Use a fixed voting_period_id, change this when you start a new vote
+        const CURRENT_VOTING_PERIOD = 1;
+        
+        const vote = await db('votes')
+            .where({
+                user_id: req.user.id,
+                voting_period_id: CURRENT_VOTING_PERIOD
+            })
+            .first();
+        
+        res.json({
+            hasVoted: !!vote,
+            selectedTheme: vote ? vote.theme : null
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+router.post('/votes', authenticate, async (req, res) => {
+    try {
+        const { jamId, voteData } = req.body;
+        
+        // Check if already voted
+        const existingVote = await db('votes')
+            .where({
+                user_id: req.user.id,
+                jam_id: jamId
+            })
+            .first();
+        
+        if (existingVote) {
+            return res.status(400).json({ error: 'You have already voted for this jam' });
+        }
+        
+        // Insert vote
+        const [vote] = await db('votes')
+            .insert({
+                user_id: req.user.id,
+                jam_id: jamId,
+                vote_data: JSON.stringify(voteData)
+            })
+            .returning('*');
+        
+        res.json({
+            success: true,
+            message: 'Vote submitted successfully',
+            vote
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Admin: Reset all votes for a jam (add middleware later)
+router.delete('/votes/reset/:jamId', authenticate, async (req, res) => {
+    try {
+        const { jamId } = req.params;
+        
+        // TODO: Add admin check here
+        // if (!req.user.isAdmin) return res.status(403).json({ error: 'Forbidden' });
+        
+        const deletedCount = await db('votes')
+            .where({ jam_id: jamId })
+            .delete();
+        
+        res.json({
+            success: true,
+            message: `Reset ${deletedCount} votes for jam ${jamId}`
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 app.listen(port);
