@@ -46,7 +46,7 @@ router.get('/getVotes', async (req, res) => {
         res.json({
             success: true,
             voteCounts: voteCounts.map(v => ({
-                theme: v.theme,
+                prerequisite: v.theme,
                 count: parseInt(v.count)
             })),
             totalVotes: parseInt(totalVotes.total)
