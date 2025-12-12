@@ -57,6 +57,21 @@ router.get('/getVotes', async (req, res) => {
     }
 });
 
+router.get('/countUsers', async (req, res) => {
+    try {
+        const userCountResult = await db('users').count('* as count').first();
+        const userCount = parseInt(userCountResult.count);
+        
+        res.json({
+            success: true,
+            userCount
+        });
+    } catch (error) {
+        console.error('Count users error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 router.get('/user/me', authenticate, async (req, res) => {
     res.send(req.user);
 });
